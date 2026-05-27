@@ -38,6 +38,7 @@ class Parser:
         self._erro(f"Esperado {esperado}, encontrado '{tok[1]}'", tok)
         return False
 
+#////////Modo Panico////////
     def _erro(self, mensagem: str, tok: tuple = None):
         tok = tok or self._atual()
         linha  = tok[2]
@@ -50,6 +51,7 @@ class Parser:
                 return
             self._avanca()
 
+#/////////Regras da gramatica/////////
     def programa(self):
         while self._tipo_atual() != "EOF":
             self._declaracao()
@@ -87,6 +89,7 @@ class Parser:
             self._avanca()
             self._sincronizar()
 
+#/////////Definicao de funcao//////////
     def _def_funcao(self):
         self._avanca()                                 
         self._consome("IDENTIFICADOR")                  
@@ -104,7 +107,8 @@ class Parser:
             if not self._consome("IDENTIFICADOR"):
                 self._sincronizar()
                 return
-
+            
+#///////////Declaracao de variavel///////////
     def _decl_variavel(self):
         self._avanca()                                  
         if not self._consome("IDENTIFICADOR"):
@@ -114,6 +118,7 @@ class Parser:
             self._avanca()                              
             self._expressao()
 
+#///////////Atribuicao ou chamada de funcao///////////
     def _atrib_ou_chamada(self):
         nome = self._avanca()                           
 
@@ -137,6 +142,7 @@ class Parser:
                 self._expressao()
         self._consome("PAREN_DIR", ")")
 
+#///////////Estruturas de controle///////////
     def _estrutura_controle(self):
         lexema = self._lexema_atual()
         if lexema == "if":
@@ -178,7 +184,7 @@ class Parser:
         self._consome("DOIS_PONTOS", ":")
         self._bloco()
 
-
+#///////////Bloco (declaracoes)///////////
     def _bloco(self):
         if not self._consome("CHAVE_ESQ", "{"):
             self._sincronizar()
@@ -195,7 +201,7 @@ class Parser:
         # consome CHAVE_DIR apenas se presente
         if self._tipo_atual() == "CHAVE_DIR":
             self._avanca()
-
+#///////////Expressao///////////
     def _expressao(self):
         self._expr_logica()
 
@@ -254,7 +260,7 @@ class Parser:
             self._erro(f"Expressão inválida: '{lexema}'")
             self._avanca()
             self._sincronizar()
-
+#///////////Entrada//////////////
     def analisar(self) -> bool:
         self.programa()
         return len(self.erros) == 0
