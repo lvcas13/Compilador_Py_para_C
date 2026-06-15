@@ -32,16 +32,28 @@ def exibir_resultado_lexico(tokens: list, erros: list):
         print("  Nenhum aviso ou erro léxico encontrado.\n")
 
 
-def exibir_resultado_parser(sucesso: bool, erros: list):
+def exibir_resultado_parser(sucesso: bool, erros_sintaticos: list, erros_semanticos: list):
     print(f"\n{'='*55}")
-    print("  ANÁLISE SINTÁTICA")
+    print("  ANÁLISE SINTÁTICA E SEMÂNTICA")
     print(f"{'='*55}")
-    if sucesso:
-        print("  Análise sintática concluída com sucesso!")
+    
+    if sucesso and not erros_semanticos:
+        print("  Análise concluída com sucesso! Nenhum erro encontrado.")
     else:
-        print(f"  Encontrado(s) {len(erros)} erro(s) sintático(s):\n")
-        for erro in erros:
-            print(f"  {erro}")
+
+        if erros_sintaticos:
+            print(f"  Encontrado(s) {len(erros_sintaticos)} erro(s) sintático(s):\n")
+            for erro in erros_sintaticos:
+                print(f"  {erro}")
+        
+        # fase semantica
+        if erros_semanticos:
+            if erros_sintaticos:
+                print() 
+            print(f"  Encontrado(s) {len(erros_semanticos)} erro(s) semântico(s):\n")
+            for erro in erros_semanticos:
+                print(f"  {erro}")
+                
     print(f"{'='*55}\n")
 
 
@@ -56,10 +68,11 @@ def main():
     tokens  = lexico.tokenizar(codigo)
     exibir_resultado_lexico(tokens, lexico.erros)
 
-    # fase 2 — análise sintática
+    # fase 2 — análise sintática e semântica*
     parser  = Parser(tokens)
     sucesso = parser.analisar()
-    exibir_resultado_parser(sucesso, parser.erros)
+    exibir_resultado_parser(sucesso, parser.erros, parser.erros_semanticos)
+    
 
 
 if __name__ == "__main__":

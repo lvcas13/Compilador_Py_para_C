@@ -1,9 +1,11 @@
-def calcular_soma(a, b):
-    int resultado = a + b
-    return resultado
+int valor = 100
 
-int contador = 0
+# Erro Semantico 1: Tentando recriar uma variavel que ja existe
+int valor = 200
 
-while contador < 10:
-    contador = contador + 1
-    print(contador)
+# Erro Semantico 2: Tentando usar uma variavel (taxa) que nao foi criada
+int total = valor + taxa
+
+# Erro Semantico 3: Condicao usando variavel inexistente (limite)
+if limite > 0:
+    print(total)

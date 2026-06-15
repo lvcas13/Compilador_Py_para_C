@@ -8,9 +8,11 @@ TIPOS_C = {"int", "float", "char", "void", "bool", "double"}
 class Parser:
 
     def __init__(self, tokens: list):
-        self.tokens = [t for t in tokens if t[0] != "ERRO"]
+        self.tokens = [t for t in tokens if t[0] not in ("ERRO", "COMENTARIO")]
         self.pos    = 0
         self.erros  = []
+        self.erros_semanticos = [] #fase semantica: guarda os erros semanticos encontrados durante a analise sintatica
+        self.tabela_simbolos = {} #fase semantica: tabela de simbolos para variaveis e funcoes
 
     def _atual(self) -> tuple:
         if self.pos < len(self.tokens):
@@ -44,6 +46,13 @@ class Parser:
         linha  = tok[2]
         coluna = tok[3]
         self.erros.append(f"[Erro Sintático] Linha {linha}, Coluna {coluna}: {mensagem}")
+
+    #fase semantica: registra um erro semantico, usando o token atual para obter a linha e coluna do erro
+    def _erro_semantico(self, mensagem: str, tok: tuple = None):
+        tok = tok or self._atual()
+        linha  = tok[2]
+        coluna = tok[3]
+        self.erros_semanticos.append(f"[Erro Semântico] Linha {linha}, Coluna {coluna}: {mensagem}")
 
     def _sincronizar(self):
         while self._tipo_atual() != "EOF":
@@ -110,10 +119,22 @@ class Parser:
             
 #///////////Declaracao de variavel///////////
     def _decl_variavel(self):
-        self._avanca()                                  
+        tipo_var = self._lexema_atual() #fase semantica: guarda o tipo da variavel para verificar atribuições futuras
+        self._avanca()                 
+
+        tok_nome = self._atual() #fase semantica: guarda o nome da variavel para verificar atribuições futuras
         if not self._consome("IDENTIFICADOR"):
             self._sincronizar()
             return
+        nome_var = tok_nome[1]
+
+        # regra semantica
+        if nome_var in self.tabela_simbolos: #verifica se a variavel ja foi declarada
+            self._erro_semantico(f"Variável '{nome_var}' já declarada", tok_nome)
+        else:
+            self.tabela_simbolos[nome_var] = tipo_var #adiciona a variavel na tabela de simbolos com seu tipo
+        #fim da regra semantica 
+
         if self._tipo_atual() == "ATRIB":
             self._avanca()                              
             self._expressao()
@@ -246,7 +267,16 @@ class Parser:
             self._consome("PAREN_DIR", ")")
 
         elif tipo == "IDENTIFICADOR":
-            self._avanca()
+            tok_id = self._atual() #captura o token atual
+            nome_var = tok_id[1]   #salva o nome da varialvel 'nome_var'
+            self._avanca() #consome o token
+
+            # regra semantica: verifica se a variavel ou funcao foi declarada antes de usar
+            if self._tipo_atual() != "PAREN_ESQ": # Se NÃO for uma chamada de função
+                if nome_var not in self.tabela_simbolos:
+                    self._erro_semantico(f"A variável '{nome_var}' não foi declarada antes do uso.", tok_id)
+            #fim da regra semantica
+
             if self._tipo_atual() == "PAREN_ESQ":
                 self._args_chamada()
 

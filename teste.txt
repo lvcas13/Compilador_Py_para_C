@@ -1,8 +1,7 @@
-int base = 10
-int altura = 5
-int area = base * altura
+int a = 10
+int b = 5
 
-if area > 20:
-    print(area)
-else:
-    print(0)
+int resultado = a + b
+
+if resultado > 10:
+    print(resultado)
