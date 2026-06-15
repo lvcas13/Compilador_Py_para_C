@@ -5,7 +5,7 @@ from parser import Parser
 
 def obter_caminho() -> str:
     if len(sys.argv) < 2:
-        print("Uso: python main.py <arquivo.py>")
+        print("Uso: python main.py <arquivo.txt>")
         sys.exit(1)
     return sys.argv[1]
 

@@ -1,0 +1,8 @@
+int base = 10
+int altura = 5
+int area = base * altura
+
+if area > 20:
+    print(area)
+else:
+    print(0)
