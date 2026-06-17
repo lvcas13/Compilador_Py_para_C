@@ -1,0 +1,12 @@
+int capacidade_cesta = 20
+
+def coletar_frutas():
+    # O usuario tenta recriar a variavel global dentro da funcao
+    int capacidade_cesta = 30
+    
+    # O usuario cria uma variavel "local"
+    int frutas_coletadas = 15
+    return frutas_coletadas
+
+# O usuario tenta usar a variavel "local" aqui fora
+int total_geral = frutas_coletadas + 5

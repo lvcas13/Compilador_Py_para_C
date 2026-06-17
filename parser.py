@@ -272,7 +272,7 @@ class Parser:
             self._avanca() #consome o token
 
             # regra semantica: verifica se a variavel ou funcao foi declarada antes de usar
-            if self._tipo_atual() != "PAREN_ESQ": # Se NÃO for uma chamada de função
+            if self._tipo_atual() != "PAREN_ESQ": # Se não for uma chamada de função
                 if nome_var not in self.tabela_simbolos:
                     self._erro_semantico(f"A variável '{nome_var}' não foi declarada antes do uso.", tok_id)
             #fim da regra semantica
