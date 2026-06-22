@@ -36,6 +36,6 @@ def main() : {
 
     nota = 10
     
-    # WARNING: Vai testar a nossa coercao (se vc colocar 10.5)
+    # WARNING: Vai testar a nossa coercao
     nota = 10.5
 }
