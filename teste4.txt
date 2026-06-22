@@ -29,4 +29,13 @@ def main() : {
 
     # ERRO SEMANTICO: Tentando usar a variavel local do lado de fora do bloco
     local_var = 5
+
+    int nota
+    float media
+    char conceito
+
+    nota = 10
+    
+    # WARNING: Vai testar a nossa coercao (se vc colocar 10.5)
+    nota = 10.5
 }
