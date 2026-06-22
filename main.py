@@ -32,30 +32,37 @@ def exibir_resultado_lexico(tokens: list, erros: list):
         print("  Nenhum aviso ou erro léxico encontrado.\n")
 
 
-def exibir_resultado_parser(sucesso: bool, erros_sintaticos: list, erros_semanticos: list):
+def exibir_resultado_parser(sucesso: bool, erros_sintaticos: list, erros_semanticos: list, warnings: list):
     print(f"\n{'='*55}")
     print("  ANÁLISE SINTÁTICA E SEMÂNTICA")
     print(f"{'='*55}")
     
+    #se nao houver erros sintaticos ou semanticos
     if sucesso and not erros_semanticos:
         print("  Análise concluída com sucesso! Nenhum erro encontrado.")
     else:
-
+        #fase sintatica
         if erros_sintaticos:
             print(f"  Encontrado(s) {len(erros_sintaticos)} erro(s) sintático(s):\n")
             for erro in erros_sintaticos:
                 print(f"  {erro}")
         
-        # fase semantica
+        #fase semantica
         if erros_semanticos:
             if erros_sintaticos:
                 print() 
             print(f"  Encontrado(s) {len(erros_semanticos)} erro(s) semântico(s):\n")
             for erro in erros_semanticos:
                 print(f"  {erro}")
+
+    #exibiçao dos warnings
+    if warnings:
+        print(f"\n{'-'*55}")
+        print(f"  Gerado(s) {len(warnings)} aviso(s) (Warnings):\n")
+        for aviso in warnings:
+            print(f"  {aviso}")
                 
     print(f"{'='*55}\n")
-
 
 def main():
     caminho = obter_caminho()
@@ -63,15 +70,15 @@ def main():
 
     print(f"\nAnalisando: {caminho}\n")
 
-    # fase 1 — análise léxica
+    #fase 1 — analise lexica
     lexico  = AnalisadorLexico()
     tokens  = lexico.tokenizar(codigo)
     exibir_resultado_lexico(tokens, lexico.erros)
 
-    # fase 2 — análise sintática e semântica*
+    #fase 2 — analise sintatica e semantica*
     parser  = Parser(tokens)
     sucesso = parser.analisar()
-    exibir_resultado_parser(sucesso, parser.erros, parser.erros_semanticos)
+    exibir_resultado_parser(sucesso, parser.erros, parser.erros_semanticos, parser.warnings)
     
 
 

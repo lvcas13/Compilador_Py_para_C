@@ -1,7 +1,9 @@
-int a = 10
-int b = 5
+int meta_colheita = 500
+float taxa_crescimento = 1.5
 
-int resultado = a + b
-
-if resultado > 10:
-    print(resultado)
+def calcular() : {
+    int arvores_mapeadas = 10.5 
+    int galhos_podados = 0      
+    
+    meta_colheita = meta_colheita + 10
+}

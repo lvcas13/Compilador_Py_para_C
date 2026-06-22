@@ -1,11 +1,8 @@
-int valor = 100
+int capacidade_cesta = 20
 
-# Erro Semantico 1: Tentando recriar uma variavel que ja existe
-int valor = 200
+if capacidade_cesta > 10 : {
+    int frutas_coletadas = 15
+    capacidade_cesta = capacidade_cesta + frutas_coletadas
+}
 
-# Erro Semantico 2: Tentando usar uma variavel (taxa) que nao foi criada
-int total = valor + taxa
-
-# Erro Semantico 3: Condicao usando variavel inexistente (limite)
-if limite > 0:
-    print(total)
+int total_geral = frutas_coletadas + 5

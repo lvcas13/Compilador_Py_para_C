@@ -11,8 +11,9 @@ class Parser:
         self.tokens = [t for t in tokens if t[0] not in ("ERRO", "COMENTARIO")]
         self.pos    = 0
         self.erros  = []
-        self.erros_semanticos = [] #fase semantica: guarda os erros semanticos encontrados durante a analise sintatica
-        self.tabela_simbolos = {} #fase semantica: tabela de simbolos para variaveis e funcoes
+        self.erros_semanticos = [] #fase semantica: guarda os erros graves
+        self.pilha_escopos = [{}]  #fase semantica: tabela de símbolos em forma de pilha de dicionarios
+        self.warnings = []         #fase semantica: guarda os avisos
 
     def _atual(self) -> tuple:
         if self.pos < len(self.tokens):
@@ -30,6 +31,29 @@ class Parser:
         if self.pos < len(self.tokens):
             self.pos += 1
         return tok
+    
+    #fase semantica: ferramenta para buscar a ficha completa de uma variavel em todos os escopos
+    def _buscar_simbolo(self, nome_var):
+        #procura a variavel do escopo mais interno para o mais externo
+        for escopo in reversed(self.pilha_escopos):
+            if nome_var in escopo:
+                return escopo[nome_var] #retorna a ficha completa
+        return None
+
+    #fase semantica: ferramenta para pegar o tipo do valor que vem depois do '=' ou em chamadas de funçao, para aplicar regras de coerção
+    def _pegar_tipo_valor(self) -> str:
+        tipo_tok = self._tipo_atual()
+        lexema = self._lexema_atual()
+        
+        if tipo_tok == "NUMERO":
+            return "float" if "." in lexema else "int"
+        if tipo_tok == "STRING":
+            return "string"
+        if tipo_tok == "IDENTIFICADOR":
+            ficha = self._buscar_simbolo(lexema)
+            return ficha["tipo"] if ficha else "desconhecido"
+            
+        return "desconhecido"
 
     def _consome(self, tipo: str, lexema: str = None) -> bool:
         tok = self._atual()
@@ -47,7 +71,7 @@ class Parser:
         coluna = tok[3]
         self.erros.append(f"[Erro Sintático] Linha {linha}, Coluna {coluna}: {mensagem}")
 
-    #fase semantica: registra um erro semantico, usando o token atual para obter a linha e coluna do erro
+    #fase semantica: ferramenta para registrar erros semanticos
     def _erro_semantico(self, mensagem: str, tok: tuple = None):
         tok = tok or self._atual()
         linha  = tok[2]
@@ -91,7 +115,8 @@ class Parser:
             self._args_chamada()
 
         elif tipo == "CHAVE_DIR":
-            return
+            self._erro("Encontrada chave '}' solta ou sobrando sem abrir um escopo '{'.")
+            self._avanca()
 
         else:
             self._erro(f"Declaração inválida: '{lexema}'")
@@ -119,39 +144,64 @@ class Parser:
             
 #///////////Declaracao de variavel///////////
     def _decl_variavel(self):
-        tipo_var = self._lexema_atual() #fase semantica: guarda o tipo da variavel para verificar atribuições futuras
+        tipo_var = self._lexema_atual() 
         self._avanca()                 
 
-        tok_nome = self._atual() #fase semantica: guarda o nome da variavel para verificar atribuições futuras
+        tok_nome = self._atual() 
         if not self._consome("IDENTIFICADOR"):
             self._sincronizar()
             return
         nome_var = tok_nome[1]
+        linha_var = tok_nome[2]
 
-        # regra semantica
-        if nome_var in self.tabela_simbolos: #verifica se a variavel ja foi declarada
-            self._erro_semantico(f"Variável '{nome_var}' já declarada", tok_nome)
+        #regras semanticas para declaracao de variaveis
+        #1.verifica duplicidade no escopo atual [-1]
+        if nome_var in self.pilha_escopos[-1]: 
+            self._erro_semantico(f"Variável '{nome_var}' já declarada neste escopo", tok_nome)
         else:
-            self.tabela_simbolos[nome_var] = tipo_var #adiciona a variavel na tabela de simbolos com seu tipo
-        #fim da regra semantica 
+            #2.cria a ficha completa da variavel
+            self.pilha_escopos[-1][nome_var] = {
+                "tipo": tipo_var,
+                "usada": False,
+                "linha": linha_var
+            }
 
         if self._tipo_atual() == "ATRIB":
-            self._avanca()                              
+            self._avanca()
+            
+            #3.verifica coerção de tipos na atribuiçao
+            tipo_recebido = self._pegar_tipo_valor()
+            if tipo_var == "int" and tipo_recebido == "float":
+                self.warnings.append(f"[Aviso] Linha {linha_var}: Conversão implícita. Guardando 'float' em 'int' ('{nome_var}').")
+                
             self._expressao()
 
-#///////////Atribuicao ou chamada de funcao///////////
+#///////////Atribuicao ou chamada de funçao///////////
     def _atrib_ou_chamada(self):
-        nome = self._avanca()                           
+        tok_nome = self._avanca() 
+        nome_var = tok_nome[1]
 
         if self._tipo_atual() == "ATRIB":
-            self._avanca()                              
+            self._avanca()
+            
+            #regras semanticas para atribuiçao
+            #verifica se a variavel existe e qual o tipo do valor que vem depois o '=' para aplicar regras de coerção
+            ficha_alvo = self._buscar_simbolo(nome_var)
+            if not ficha_alvo:
+                self._erro_semantico(f"A variável '{nome_var}' não foi declarada antes de receber um valor.", tok_nome)
+            tipo_recebido = self._pegar_tipo_valor()
+            
+            if ficha_alvo and tipo_recebido != "desconhecido":
+                if ficha_alvo["tipo"] == "int" and tipo_recebido == "float":
+                    self.warnings.append(f"[Aviso] Linha {tok_nome[2]}: Conversão implícita. Guardando 'float' em 'int' ('{nome_var}').")
+
             self._expressao()
 
         elif self._tipo_atual() == "PAREN_ESQ":
             self._args_chamada()
 
         else:
-            self._erro(f"Esperado '=' ou '(' após '{nome[1]}'", nome)
+            self._erro(f"Esperado '=' ou '(' após '{nome_var}'", tok_nome)
             self._sincronizar()
 
     def _args_chamada(self):
@@ -211,17 +261,29 @@ class Parser:
             self._sincronizar()
             return
 
+        #fase semantica: abre um novo escopo local
+        self.pilha_escopos.append({})
+
         def _fim_bloco():
             if self._tipo_atual() in ("CHAVE_DIR", "EOF"):
                 return True
             if self._tipo_atual() == "PALAVRA_CHAVE" and self._lexema_atual() in ("else if", "else"):
                 return True
             return False
+            
         while not _fim_bloco():
             self._declaracao()
-        # consome CHAVE_DIR apenas se presente
+            
+        #consome CHAVE_DIR apenas se presente
         if self._tipo_atual() == "CHAVE_DIR":
             self._avanca()
+            
+        #fase semantica: fecha o escopo e verifica quem morreu sem ser usado
+        escopo_morto = self.pilha_escopos.pop()
+        for var, ficha in escopo_morto.items():
+            if not ficha["usada"]:
+                self.warnings.append(f"[Aviso] Linha {ficha['linha']}: A variável '{var}' ({ficha['tipo']}) foi declarada, mas nunca utilizada.")
+
 #///////////Expressao///////////
     def _expressao(self):
         self._expr_logica()
@@ -267,15 +329,18 @@ class Parser:
             self._consome("PAREN_DIR", ")")
 
         elif tipo == "IDENTIFICADOR":
-            tok_id = self._atual() #captura o token atual
-            nome_var = tok_id[1]   #salva o nome da varialvel 'nome_var'
-            self._avanca() #consome o token
+            tok_id = self._atual() 
+            nome_var = tok_id[1]   
+            self._avanca() 
 
-            # regra semantica: verifica se a variavel ou funcao foi declarada antes de usar
-            if self._tipo_atual() != "PAREN_ESQ": # Se não for uma chamada de função
-                if nome_var not in self.tabela_simbolos:
+            #regras semanticas para uso de variaveis
+            if self._tipo_atual() != "PAREN_ESQ": #nao eh chamada de funcao, entao eh uso de variavel
+                ficha = self._buscar_simbolo(nome_var) #busca a ficha em todos os escopos
+                
+                if not ficha:
                     self._erro_semantico(f"A variável '{nome_var}' não foi declarada antes do uso.", tok_id)
-            #fim da regra semantica
+                else:
+                    ficha["usada"] = True #atualiza a ficha para marcar que a variável foi usada
 
             if self._tipo_atual() == "PAREN_ESQ":
                 self._args_chamada()
@@ -290,7 +355,16 @@ class Parser:
             self._erro(f"Expressão inválida: '{lexema}'")
             self._avanca()
             self._sincronizar()
+            
 #///////////Entrada//////////////
     def analisar(self) -> bool:
         self.programa()
+        
+        #fase semantica: verifica o escopo global no fim do programa
+        if self.pilha_escopos:
+            escopo_global = self.pilha_escopos.pop()
+            for var, ficha in escopo_global.items():
+                if not ficha["usada"]:
+                    self.warnings.append(f"[Aviso] Linha {ficha['linha']}: A variável global '{var}' ({ficha['tipo']}) foi declarada, mas nunca utilizada.")
+                    
         return len(self.erros) == 0

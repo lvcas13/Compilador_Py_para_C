@@ -1,0 +1,41 @@
+def main() : {
+    int nota_prova
+    nota_prova = 10
+
+    int global_var
+    global_var = 10
+
+    # 2. ERRO SEMANTICO: Tentando declarar a mesma variavel de novo
+    int nota_prova
+
+    # 3. WARNING: Variavel declarada, mas nunca usada
+    int media_final
+    int aluno_fantasma
+
+    # 4. ERRO SEMANTICO: Usando uma variavel que nao existe
+    nota_trabalho = 8
+
+    # 5. Cenario misto: bonus nao existe.
+    media_final = nota_prova + bonus
+
+    if global_var : {
+        # Entramos num novo escopo
+        int local_var
+        int fantasma_local
+        
+        # Funciona, porque o local enxerga o global:
+        local_var = global_var 
+    }
+
+    # ERRO SEMANTICO: Tentando usar a variavel local do lado de fora do bloco
+    local_var = 5
+
+    int nota
+    float media
+    char conceito
+
+    nota = 10
+    
+    # WARNING: Vai testar a nossa coercao (se vc colocar 10.5)
+    nota = 10.5
+}
